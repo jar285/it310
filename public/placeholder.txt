@@ -1,0 +1,10 @@
+This is a placeholder file to ensure the public directory exists. 
+
+For the application to work properly, you'll need to add the following image files:
+- hero-image.jpg
+- tutor-image.jpg
+- testimonial-1.jpg
+- testimonial-2.jpg
+- testimonial-3.jpg
+
+These can be any appropriate educational/learning related images.
