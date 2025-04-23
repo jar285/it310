@@ -1,10 +1,40 @@
 'use client'
+import { useState, useEffect } from 'react';
+import Image from 'next/image';
+import Link from 'next/link';
 import MainLayout from '@/components/layout/main-layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import Link from 'next/link';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Search, Star, MapPin, BookOpen, Users, Filter } from 'lucide-react';
+
+interface Tutor {
+  id: string;
+  user: {
+    id: string;
+    name: string | null;
+    email: string;
+    image: string | null;
+  };
+  bio: string | null;
+  specialization: string | null;
+  experience: number | null;
+  hourlyRate: number | null;
+  rating: number | null;
+  reviewCount: number | null;
+  location: string | null;
+}
 
 export default function TutorsPage() {
+  const [tutors, setTutors] = useState<Tutor[]>([]);
+  const [filteredTutors, setFilteredTutors] = useState<Tutor[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedSubject, setSelectedSubject] = useState('');
+  const [priceRange, setPriceRange] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
+
   // This would be fetched from an API in a real application
   const subjects = [
     'Mathematics',
@@ -20,214 +50,299 @@ export default function TutorsPage() {
     'Art',
   ];
 
-  // This would be fetched from an API in a real application
-  const tutors = Array.from({ length: 12 }, (_, i) => ({
-    id: `tutor-${i + 1}`,
-    name: `Tutor Name ${i + 1}`,
-    subjects: [
-      subjects[Math.floor(Math.random() * subjects.length)],
-      subjects[Math.floor(Math.random() * subjects.length)],
-    ].filter((v, i, a) => a.indexOf(v) === i), // Remove duplicates
-    location: ['New York', 'Los Angeles', 'Chicago', 'Houston', 'Phoenix'][Math.floor(Math.random() * 5)],
-    rate: Math.floor(Math.random() * 50) + 20, // Random rate between $20-$70
-    rating: (Math.random() * 2 + 3).toFixed(1), // Random rating between 3-5
-    ratingCount: Math.floor(Math.random() * 100) + 5,
-    experience: Math.floor(Math.random() * 15) + 1, // 1-15 years
-    bio: 'Experienced tutor with a passion for teaching and helping students achieve their academic goals.',
-    availability: ['Weekdays', 'Evenings', 'Weekends'][Math.floor(Math.random() * 3)],
-  }));
+  useEffect(() => {
+    const fetchTutors = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch('/api/tutors');
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch tutors');
+        }
+        
+        const data = await response.json();
+        setTutors(data);
+        setFilteredTutors(data);
+      } catch (err) {
+        console.error('Error fetching tutors:', err);
+        setError('Failed to load tutors. Please try again later.');
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchTutors();
+  }, []);
+
+  useEffect(() => {
+    // Apply filters whenever filter criteria change
+    let results = tutors;
+    
+    // Filter by search term (name or specialization)
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      results = results.filter(tutor => 
+        (tutor.user.name?.toLowerCase().includes(term) || false) || 
+        (tutor.specialization?.toLowerCase().includes(term) || false)
+      );
+    }
+    
+    // Filter by subject
+    if (selectedSubject) {
+      results = results.filter(tutor => 
+        tutor.specialization?.toLowerCase().includes(selectedSubject.toLowerCase())
+      );
+    }
+    
+    // Filter by price range
+    if (priceRange) {
+      const [min, max] = priceRange.split('-').map(Number);
+      results = results.filter(tutor => {
+        if (!tutor.hourlyRate) return false;
+        if (max) {
+          return tutor.hourlyRate >= min && tutor.hourlyRate <= max;
+        } else {
+          return tutor.hourlyRate >= min;
+        }
+      });
+    }
+    
+    setFilteredTutors(results);
+  }, [searchTerm, selectedSubject, priceRange, tutors]);
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value);
+  };
+
+  const handleSubjectChange = (value: string) => {
+    setSelectedSubject(value);
+  };
+
+  const handlePriceRangeChange = (value: string) => {
+    setPriceRange(value);
+  };
+
+  const resetFilters = () => {
+    setSearchTerm('');
+    setSelectedSubject('');
+    setPriceRange('');
+  };
+
+  // Generate star rating display
+  const renderStars = (rating: number | null) => {
+    if (!rating) return null;
+    
+    return (
+      <div className="flex items-center">
+        {[...Array(5)].map((_, i) => (
+          <Star
+            key={i}
+            className={`h-4 w-4 ${i < Math.round(rating) ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}`}
+          />
+        ))}
+        <span className="ml-1 text-sm text-gray-600">{rating.toFixed(1)}</span>
+      </div>
+    );
+  };
 
   return (
     <MainLayout>
-      <div className="bg-gray-50 py-8">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Find a Tutor</h1>
-              <p className="mt-1 text-lg text-gray-600">Connect with experienced tutors in your area</p>
-            </div>
-            <div className="mt-4 md:mt-0">
-              <div className="relative rounded-md shadow-sm max-w-xs">
-                <Input type="text" placeholder="Search tutors..." className="pr-10" />
-                <div className="absolute inset-y-0 right-0 flex items-center pr-3">
-                  <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                    <path fillRule="evenodd" d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z" clipRule="evenodd" />
-                  </svg>
-                </div>
-              </div>
-            </div>
+      <div className="bg-gray-50 min-h-screen py-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h1 className="text-4xl font-extrabold text-gray-900 sm:text-5xl sm:tracking-tight lg:text-6xl">
+              Find Your Perfect Tutor
+            </h1>
+            <p className="mt-5 max-w-xl mx-auto text-xl text-gray-500">
+              Connect with expert tutors in various subjects to help you achieve your learning goals.
+            </p>
           </div>
 
-          <div className="mt-8 grid grid-cols-1 gap-8 md:grid-cols-4">
-            {/* Filters */}
-            <div className="hidden md:block">
-              <div className="rounded-lg bg-white p-6 shadow-sm">
-                <h2 className="text-lg font-medium text-gray-900">Location</h2>
-                <div className="mt-4">
-                  <Input type="text" placeholder="Enter your location" />
-                  <div className="mt-2">
-                    <label className="inline-flex items-center">
-                      <input
-                        type="checkbox"
-                        className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-                      />
-                      <span className="ml-2 text-sm text-gray-600">Virtual sessions only</span>
-                    </label>
-                  </div>
+          {/* Search and Filter Section */}
+          <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
+            <div className="flex flex-col md:flex-row md:items-center md:space-x-4 mb-4">
+              <div className="relative flex-1 mb-4 md:mb-0">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Search className="h-5 w-5 text-gray-400" />
                 </div>
-
-                <div className="mt-8">
-                  <h2 className="text-lg font-medium text-gray-900">Subjects</h2>
-                  <div className="mt-4 space-y-2">
-                    {subjects.slice(0, 6).map((subject) => (
-                      <div key={subject} className="flex items-center">
-                        <input
-                          id={`subject-${subject}`}
-                          name={`subject-${subject}`}
-                          type="checkbox"
-                          className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-                        />
-                        <label htmlFor={`subject-${subject}`} className="ml-3 text-sm text-gray-600">
+                <Input
+                  type="text"
+                  placeholder="Search by name or specialization"
+                  className="pl-10"
+                  value={searchTerm}
+                  onChange={handleSearchChange}
+                />
+              </div>
+              
+              <Button 
+                variant="outline" 
+                className="flex items-center justify-center" 
+                onClick={() => setShowFilters(!showFilters)}
+              >
+                <Filter className="h-4 w-4 mr-2" />
+                {showFilters ? 'Hide Filters' : 'Show Filters'}
+              </Button>
+            </div>
+            
+            {showFilters && (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4 pt-4 border-t border-gray-100">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Subject
+                  </label>
+                  <Select value={selectedSubject} onValueChange={handleSubjectChange}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="All Subjects" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">All Subjects</SelectItem>
+                      {subjects.map((subject) => (
+                        <SelectItem key={subject} value={subject}>
                           {subject}
-                        </label>
-                      </div>
-                    ))}
-                    <div className="pt-2">
-                      <button className="text-sm text-primary-600 hover:text-primary-500">
-                        Show more
-                      </button>
-                    </div>
-                  </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-
-                <div className="mt-8">
-                  <h2 className="text-lg font-medium text-gray-900">Hourly Rate</h2>
-                  <div className="mt-4 space-y-2">
-                    {['Under $25', '$25 - $50', '$50 - $75', 'Over $75'].map((rate) => (
-                      <div key={rate} className="flex items-center">
-                        <input
-                          id={`rate-${rate}`}
-                          name={`rate-${rate}`}
-                          type="checkbox"
-                          className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-                        />
-                        <label htmlFor={`rate-${rate}`} className="ml-3 text-sm text-gray-600">
-                          {rate}
-                        </label>
-                      </div>
-                    ))}
-                  </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Price Range ($/hour)
+                  </label>
+                  <Select value={priceRange} onValueChange={handlePriceRangeChange}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Any Price" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">Any Price</SelectItem>
+                      <SelectItem value="0-25">$0 - $25</SelectItem>
+                      <SelectItem value="25-50">$25 - $50</SelectItem>
+                      <SelectItem value="50-75">$50 - $75</SelectItem>
+                      <SelectItem value="75-100">$75 - $100</SelectItem>
+                      <SelectItem value="100-">$100+</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
-
-                <div className="mt-8">
-                  <h2 className="text-lg font-medium text-gray-900">Availability</h2>
-                  <div className="mt-4 space-y-2">
-                    {['Weekdays', 'Evenings', 'Weekends'].map((time) => (
-                      <div key={time} className="flex items-center">
-                        <input
-                          id={`time-${time}`}
-                          name={`time-${time}`}
-                          type="checkbox"
-                          className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-                        />
-                        <label htmlFor={`time-${time}`} className="ml-3 text-sm text-gray-600">
-                          {time}
-                        </label>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="mt-8">
-                  <Button variant="outline" className="w-full">Apply Filters</Button>
+                
+                <div className="flex items-end">
+                  <Button variant="outline" onClick={resetFilters} className="w-full">
+                    Reset Filters
+                  </Button>
                 </div>
               </div>
-            </div>
-
-            {/* Tutors Grid */}
-            <div className="md:col-span-3">
-              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                {tutors.map((tutor) => (
-                  <div key={tutor.id} className="flex flex-col rounded-lg bg-white shadow-sm overflow-hidden transition-transform hover:shadow-md hover:-translate-y-1">
-                    <div className="relative h-48 bg-gray-200 flex items-center justify-center">
-                      {/* Tutor avatar placeholder */}
-                      <div className="h-32 w-32 rounded-full bg-primary-100 flex items-center justify-center">
-                        <span className="text-3xl font-bold text-primary-600">{tutor.name.split(' ').map(n => n[0]).join('')}</span>
-                      </div>
-                    </div>
-                    <div className="flex flex-col flex-1 p-4">
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="text-xs font-medium text-gray-600">
-                          {tutor.location}
-                        </span>
-                        <div className="flex items-center">
-                          <span className="text-yellow-400">{`${'★'.repeat(Math.floor(Number(tutor.rating)))}${Number(tutor.rating) % 1 >= 0.5 ? '★' : '☆'}${'☆'.repeat(5 - Math.ceil(Number(tutor.rating)))}`}</span>
-                          <span className="text-xs text-gray-500 ml-1">{tutor.rating}</span>
-                        </div>
-                      </div>
-                      <h3 className="text-lg font-semibold text-gray-900 mb-1">{tutor.name}</h3>
-                      <div className="mb-2 flex flex-wrap gap-1">
-                        {tutor.subjects.map((subject) => (
-                          <span key={subject} className="text-xs font-medium text-primary-600 bg-primary-50 px-2 py-1 rounded-full">
-                            {subject}
-                          </span>
-                        ))}
-                      </div>
-                      <p className="text-sm text-gray-600 mb-4 flex-grow">{tutor.bio}</p>
-                      <div className="flex justify-between items-center mt-auto">
-                        <span className="text-lg font-bold text-gray-900">${tutor.rate}/hr</span>
-                        <Link href={`/tutors/${tutor.id}`}>
-                          <Button size="sm">View Profile</Button>
-                        </Link>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Pagination */}
-              <div className="mt-8 flex justify-center">
-                <nav className="inline-flex rounded-md shadow">
-                  <a
-                    href="#"
-                    className="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0"
-                  >
-                    <span className="sr-only">Previous</span>
-                    <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                      <path fillRule="evenodd" d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z" clipRule="evenodd" />
-                    </svg>
-                  </a>
-                  <a
-                    href="#"
-                    className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0"
-                  >
-                    1
-                  </a>
-                  <a
-                    href="#"
-                    className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0"
-                  >
-                    2
-                  </a>
-                  <a
-                    href="#"
-                    className="relative hidden items-center px-4 py-2 text-sm font-semibold text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 md:inline-flex"
-                  >
-                    3
-                  </a>
-                  <a
-                    href="#"
-                    className="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0"
-                  >
-                    <span className="sr-only">Next</span>
-                    <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                      <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clipRule="evenodd" />
-                    </svg>
-                  </a>
-                </nav>
-              </div>
-            </div>
+            )}
           </div>
+
+          {/* Tutors Grid */}
+          {loading ? (
+            <div className="flex justify-center items-center h-64">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+            </div>
+          ) : error ? (
+            <div className="text-center py-12">
+              <p className="text-red-500 mb-4">{error}</p>
+              <Button onClick={() => window.location.reload()}>Try Again</Button>
+            </div>
+          ) : filteredTutors.length === 0 ? (
+            <div className="text-center py-12 bg-white rounded-lg shadow-sm">
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No tutors found</h3>
+              <p className="text-gray-500 mb-6">Try adjusting your filters or search criteria.</p>
+              <Button onClick={resetFilters}>Reset Filters</Button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredTutors.map((tutor) => (
+                <div key={tutor.id} className="bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+                  <div className="p-6">
+                    <div className="flex items-center mb-4">
+                      <div className="relative h-16 w-16 rounded-full overflow-hidden bg-gray-100 flex-shrink-0">
+                        {tutor.user.image ? (
+                          <Image 
+                            src={tutor.user.image} 
+                            alt={tutor.user.name || 'Tutor'} 
+                            fill 
+                            className="object-cover" 
+                          />
+                        ) : (
+                          <div className="h-full w-full flex items-center justify-center bg-primary-100 text-primary-600 text-xl font-semibold">
+                            {tutor.user.name ? tutor.user.name.charAt(0).toUpperCase() : 'T'}
+                          </div>
+                        )}
+                      </div>
+                      <div className="ml-4">
+                        <h3 className="text-lg font-semibold text-gray-900">
+                          {tutor.user.name || 'Anonymous Tutor'}
+                        </h3>
+                        <p className="text-sm text-gray-500">
+                          {tutor.specialization || 'General Tutor'}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <div className="mb-4">
+                      <p className="text-gray-600 line-clamp-3">
+                        {tutor.bio || 'This tutor has not added a bio yet.'}
+                      </p>
+                    </div>
+                    
+                    <div className="space-y-2 mb-6">
+                      {tutor.experience !== null && (
+                        <div className="flex items-center">
+                          <BookOpen className="h-4 w-4 text-gray-400 mr-2" />
+                          <span className="text-sm text-gray-600">
+                            {tutor.experience} {tutor.experience === 1 ? 'year' : 'years'} of experience
+                          </span>
+                        </div>
+                      )}
+                      
+                      {tutor.location && (
+                        <div className="flex items-center">
+                          <MapPin className="h-4 w-4 text-gray-400 mr-2" />
+                          <span className="text-sm text-gray-600">{tutor.location}</span>
+                        </div>
+                      )}
+                      
+                      {tutor.rating !== null && (
+                        <div className="flex items-center">
+                          <Users className="h-4 w-4 text-gray-400 mr-2" />
+                          <span className="text-sm text-gray-600">
+                            {renderStars(tutor.rating)}
+                            {tutor.reviewCount && (
+                              <span className="ml-1 text-xs text-gray-500">
+                                ({tutor.reviewCount} {tutor.reviewCount === 1 ? 'review' : 'reviews'})
+                              </span>
+                            )}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+                      {tutor.hourlyRate ? (
+                        <span className="text-lg font-semibold text-gray-900">
+                          ${tutor.hourlyRate.toFixed(2)}/hour
+                        </span>
+                      ) : (
+                        <span className="text-sm text-gray-500">Rate not specified</span>
+                      )}
+                      
+                      <Link href={`/tutors/${tutor.id}`}>
+                        <Button>View Profile</Button>
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          
+          {/* Pagination - would be implemented in a real application */}
+          {!loading && !error && filteredTutors.length > 0 && (
+            <div className="mt-12 flex justify-center">
+              <Button variant="outline" className="mx-2">Previous</Button>
+              <Button variant="outline" className="mx-2">Next</Button>
+            </div>
+          )}
         </div>
       </div>
     </MainLayout>

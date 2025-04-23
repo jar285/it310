@@ -1,423 +1,570 @@
 'use client'
+import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import MainLayout from '@/components/layout/main-layout';
-import { formatPrice } from '@/lib/utils';
+import { Book, Clock, Award, ShoppingBag, User, Calendar, CheckCircle, BookOpen, RefreshCw } from 'lucide-react';
+
+interface Course {
+  id: string;
+  title: string;
+  description: string;
+  imageUrl: string | null;
+  price: number;
+  tutor: {
+    id: string;
+    user: {
+      name: string | null;
+    };
+  };
+}
+
+interface Order {
+  id: string;
+  totalAmount: number;
+  status: string;
+  createdAt: string;
+  orderItems: {
+    id: string;
+    quantity: number;
+    price: number;
+    course: {
+      id: string;
+      title: string;
+      imageUrl: string | null;
+    };
+  }[];
+}
+
+interface Enrollment {
+  id: string;
+  enrollmentDate: string;
+  completionDate: string | null;
+  progress: number;
+  status: string;
+  course: {
+    id: string;
+    title: string;
+    description: string;
+    imageUrl: string | null;
+    duration: number;
+    level: string;
+    tutor: {
+      id: string;
+      user: {
+        name: string | null;
+      };
+    };
+  };
+}
+
+interface UserProfile {
+  id: string;
+  name: string | null;
+  email: string;
+  image: string | null;
+  profile?: {
+    bio: string | null;
+    phoneNumber: string | null;
+    address: string | null;
+    city: string | null;
+    state: string | null;
+    zipCode: string | null;
+    country: string | null;
+  };
+}
+
+interface EnrollmentStats {
+  totalEnrollments: number;
+  completedCourses: number;
+  inProgressCourses: number;
+  averageProgress: number;
+}
 
 export default function DashboardPage() {
-  // Mock data for the dashboard
-  const enrolledCourses = [
-    {
-      id: 'course-1',
-      title: 'Complete Web Development Bootcamp',
-      instructor: 'John Smith',
-      progress: 45,
-      lastAccessed: '2 days ago',
-      thumbnail: '/course-thumbnail-1.jpg',
-    },
-    {
-      id: 'course-2',
-      title: 'Advanced JavaScript: From Fundamentals to Functional JS',
-      instructor: 'Sarah Johnson',
-      progress: 78,
-      lastAccessed: 'Yesterday',
-      thumbnail: '/course-thumbnail-2.jpg',
-    },
-    {
-      id: 'course-3',
-      title: 'Data Science and Machine Learning with Python',
-      instructor: 'Michael Chen',
-      progress: 12,
-      lastAccessed: '1 week ago',
-      thumbnail: '/course-thumbnail-3.jpg',
-    },
-  ];
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
+  const [recentOrders, setRecentOrders] = useState<Order[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
+  const [orderStats, setOrderStats] = useState({
+    totalOrders: 0,
+    totalSpent: 0,
+    completedOrders: 0
+  });
+  const [enrollmentStats, setEnrollmentStats] = useState<EnrollmentStats>({
+    totalEnrollments: 0,
+    completedCourses: 0,
+    inProgressCourses: 0,
+    averageProgress: 0
+  });
 
-  const upcomingTutoringSessions = [
-    {
-      id: 'session-1',
-      tutor: 'Professor Alex Johnson',
-      subject: 'Mathematics',
-      date: 'Tomorrow',
-      time: '3:00 PM - 4:00 PM',
-      status: 'confirmed',
-    },
-    {
-      id: 'session-2',
-      tutor: 'Dr. Emily Rodriguez',
-      subject: 'Physics',
-      date: 'Friday, May 12',
-      time: '5:30 PM - 6:30 PM',
-      status: 'pending',
-    },
-  ];
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      router.push('/auth/login?callbackUrl=/dashboard');
+      return;
+    }
 
-  const recommendedCourses = [
-    {
-      id: 'rec-course-1',
-      title: 'Introduction to Artificial Intelligence',
-      instructor: 'David Kim',
-      rating: 4.8,
-      ratingCount: 320,
-      price: 8999,
-      thumbnail: '/rec-course-1.jpg',
-    },
-    {
-      id: 'rec-course-2',
-      title: 'UX/UI Design Fundamentals',
-      instructor: 'Lisa Wang',
-      rating: 4.9,
-      ratingCount: 450,
-      price: 7999,
-      thumbnail: '/rec-course-2.jpg',
-    },
-    {
-      id: 'rec-course-3',
-      title: 'Financial Markets and Investment Strategy',
-      instructor: 'Robert Taylor',
-      rating: 4.7,
-      ratingCount: 280,
-      price: 9999,
-      thumbnail: '/rec-course-3.jpg',
-    },
-  ];
+    if (status === 'authenticated') {
+      fetchDashboardData();
+    }
+  }, [status, router]);
 
-  const recentAchievements = [
-    {
-      id: 'achievement-1',
-      title: 'Fast Learner',
-      description: 'Completed 5 course modules in a single day',
-      date: 'May 2, 2025',
-      icon: '🚀',
-    },
-    {
-      id: 'achievement-2',
-      title: 'Perfect Score',
-      description: 'Scored 100% on JavaScript Fundamentals quiz',
-      date: 'April 28, 2025',
-      icon: '🏆',
-    },
-    {
-      id: 'achievement-3',
-      title: 'Consistent Learner',
-      description: 'Logged in for 7 consecutive days',
-      date: 'April 25, 2025',
-      icon: '🔥',
-    },
-  ];
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      
+      // Add cache-busting parameter
+      const timestamp = new Date().getTime();
+      
+      // Fetch user profile
+      const profileResponse = await fetch(`/api/profile?t=${timestamp}`);
+      if (profileResponse.ok) {
+        const profileData = await profileResponse.json();
+        setUserProfile(profileData);
+      }
+      
+      // Fetch enrollments (purchased courses)
+      const enrollmentsResponse = await fetch(`/api/enrollments?t=${timestamp}`);
+      if (enrollmentsResponse.ok) {
+        const enrollmentsData = await enrollmentsResponse.json();
+        console.log('Dashboard enrollments data:', enrollmentsData);
+        setEnrollments(enrollmentsData.enrollments || []);
+      }
+      
+      // Fetch enrollment stats
+      const enrollmentStatsResponse = await fetch(`/api/enrollments/stats?t=${timestamp}`);
+      if (enrollmentStatsResponse.ok) {
+        const enrollmentStatsData = await enrollmentStatsResponse.json();
+        setEnrollmentStats(enrollmentStatsData);
+      }
+      
+      // Fetch orders
+      const ordersResponse = await fetch(`/api/orders?t=${timestamp}`);
+      if (ordersResponse.ok) {
+        const ordersData = await ordersResponse.json();
+        console.log('Dashboard orders data:', ordersData);
+        setRecentOrders(ordersData.orders || []);
+      }
+      
+      // Fetch order stats
+      const statsResponse = await fetch(`/api/orders/stats?t=${timestamp}`);
+      if (statsResponse.ok) {
+        const statsData = await statsResponse.json();
+        setOrderStats(statsData);
+      }
+    } catch (err) {
+      console.error('Error fetching dashboard data:', err);
+      setError('Failed to load dashboard data. Please try again later.');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  const handleRefresh = () => {
+    setRefreshing(true);
+    fetchDashboardData();
+  };
+
+  // Format date
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
+  };
+
+  // Format price
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+    }).format(price);
+  };
+
+  if (status === 'loading' || loading) {
+    return (
+      <MainLayout>
+        <div className="flex h-96 w-full items-center justify-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary-600 border-t-transparent"></div>
+        </div>
+      </MainLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <MainLayout>
+        <div className="flex h-96 w-full flex-col items-center justify-center">
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">{error}</h2>
+          <Link href="/courses">
+            <Button>Browse Courses</Button>
+          </Link>
+        </div>
+      </MainLayout>
+    );
+  }
 
   return (
     <MainLayout>
-      <div className="bg-gray-50 min-h-screen">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-              <p className="text-gray-600">Welcome back, Alex! Here's what's happening with your learning.</p>
+      <div className="container mx-auto px-4 py-8">
+        <div className="mb-8 flex justify-between items-center">
+          <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+          <button 
+            onClick={handleRefresh} 
+            className="flex items-center text-primary-600 hover:text-primary-700 font-medium"
+            disabled={refreshing}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+            Refresh
+          </button>
+        </div>
+        
+        {/* Stats Overview */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <div className="flex items-center mb-4">
+              <div className="p-2 rounded-full bg-blue-100 text-blue-600 mr-3">
+                <Book className="h-5 w-5" />
+              </div>
+              <h2 className="text-lg font-semibold text-gray-900">Courses</h2>
             </div>
-            <div className="mt-4 md:mt-0 flex space-x-3">
-              <Button variant="outline">Browse Courses</Button>
-              <Button>Find a Tutor</Button>
+            <div className="flex items-baseline">
+              <span className="text-3xl font-bold text-gray-900">{enrollmentStats.totalEnrollments}</span>
+              <span className="ml-2 text-sm text-gray-500">enrolled</span>
+            </div>
+            <div className="mt-4">
+              <Link href="/dashboard/courses" className="text-sm text-primary-600 hover:text-primary-700 font-medium">
+                View all courses →
+              </Link>
             </div>
           </div>
-
-          {/* Progress Overview */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <div className="flex items-center">
-                <div className="p-3 rounded-full bg-primary-100 text-primary-600">
-                  <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                  </svg>
-                </div>
-                <div className="ml-5">
-                  <h2 className="text-lg font-medium text-gray-900">Courses Enrolled</h2>
-                  <div className="mt-1 flex items-baseline">
-                    <p className="text-3xl font-semibold text-gray-900">3</p>
-                    <p className="ml-2 text-sm text-gray-600">courses in progress</p>
-                  </div>
-                </div>
+          
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <div className="flex items-center mb-4">
+              <div className="p-2 rounded-full bg-green-100 text-green-600 mr-3">
+                <CheckCircle className="h-5 w-5" />
               </div>
+              <h2 className="text-lg font-semibold text-gray-900">Progress</h2>
             </div>
-
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <div className="flex items-center">
-                <div className="p-3 rounded-full bg-green-100 text-green-600">
-                  <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-                <div className="ml-5">
-                  <h2 className="text-lg font-medium text-gray-900">Completed</h2>
-                  <div className="mt-1 flex items-baseline">
-                    <p className="text-3xl font-semibold text-gray-900">12</p>
-                    <p className="ml-2 text-sm text-gray-600">lessons this week</p>
-                  </div>
-                </div>
-              </div>
+            <div className="flex items-baseline">
+              <span className="text-3xl font-bold text-gray-900">{Math.round(enrollmentStats.averageProgress)}%</span>
+              <span className="ml-2 text-sm text-gray-500">average completion</span>
             </div>
-
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <div className="flex items-center">
-                <div className="p-3 rounded-full bg-blue-100 text-blue-600">
-                  <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-                <div className="ml-5">
-                  <h2 className="text-lg font-medium text-gray-900">Learning Time</h2>
-                  <div className="mt-1 flex items-baseline">
-                    <p className="text-3xl font-semibold text-gray-900">8.5</p>
-                    <p className="ml-2 text-sm text-gray-600">hours this week</p>
-                  </div>
-                </div>
+            <div className="mt-4">
+              <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-green-500" 
+                  style={{ width: `${enrollmentStats.averageProgress}%` }}
+                ></div>
               </div>
             </div>
           </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-2">
-              {/* Enrolled Courses */}
-              <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-xl font-bold text-gray-900">My Courses</h2>
-                  <Link href="/dashboard/courses" className="text-sm font-medium text-primary-600 hover:text-primary-500">
-                    View all
-                  </Link>
+          
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <div className="flex items-center mb-4">
+              <div className="p-2 rounded-full bg-purple-100 text-purple-600 mr-3">
+                <ShoppingBag className="h-5 w-5" />
+              </div>
+              <h2 className="text-lg font-semibold text-gray-900">Orders</h2>
+            </div>
+            <div className="flex items-baseline">
+              <span className="text-3xl font-bold text-gray-900">{orderStats.totalOrders}</span>
+              <span className="ml-2 text-sm text-gray-500">total</span>
+            </div>
+            <div className="mt-4">
+              <Link href="/orders" className="text-sm text-primary-600 hover:text-primary-700 font-medium">
+                View order history →
+              </Link>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <div className="flex items-center mb-4">
+              <div className="p-2 rounded-full bg-amber-100 text-amber-600 mr-3">
+                <Award className="h-5 w-5" />
+              </div>
+              <h2 className="text-lg font-semibold text-gray-900">Spent</h2>
+            </div>
+            <div className="flex items-baseline">
+              <span className="text-3xl font-bold text-gray-900">{formatPrice(orderStats.totalSpent)}</span>
+              <span className="ml-2 text-sm text-gray-500">on education</span>
+            </div>
+            <div className="mt-4">
+              <Link href="/courses" className="text-sm text-primary-600 hover:text-primary-700 font-medium">
+                Browse more courses →
+              </Link>
+            </div>
+          </div>
+        </div>
+        
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Recent Courses */}
+          <div className="lg:col-span-2">
+            <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+              <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center">
+                <h2 className="text-xl font-bold text-gray-900">Recent Courses</h2>
+                <Link href="/dashboard/courses" className="text-sm text-primary-600 hover:text-primary-700 font-medium">
+                  View all
+                </Link>
+              </div>
+              
+              {enrollments.length === 0 ? (
+                <div className="p-6 text-center">
+                  <div className="mx-auto h-16 w-16 text-gray-400">
+                    <BookOpen className="h-full w-full" />
+                  </div>
+                  <h3 className="mt-4 text-lg font-medium text-gray-900">No courses yet</h3>
+                  <p className="mt-2 text-gray-600">Enroll in a course to start your learning journey</p>
+                  <div className="mt-6">
+                    <Link href="/courses">
+                      <Button>Browse Courses</Button>
+                    </Link>
+                  </div>
                 </div>
-                <div className="space-y-6">
-                  {enrolledCourses.map((course) => (
-                    <div key={course.id} className="flex flex-col sm:flex-row sm:items-center border-b pb-6 last:border-b-0 last:pb-0">
-                      <div className="flex-shrink-0 relative h-32 w-full sm:h-24 sm:w-40 bg-gray-200 rounded-lg mb-4 sm:mb-0 sm:mr-4">
-                        {/* Course thumbnail placeholder */}
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <span className="text-gray-500">Thumbnail</span>
-                        </div>
-                      </div>
-                      <div className="flex-1">
-                        <Link href={`/courses/${course.id}`} className="text-lg font-medium text-gray-900 hover:text-primary-600">
-                          {course.title}
-                        </Link>
-                        <p className="text-sm text-gray-600">Instructor: {course.instructor}</p>
-                        <div className="mt-2">
-                          <div className="flex items-center">
-                            <div className="flex-1 bg-gray-200 rounded-full h-2.5">
-                              <div
-                                className="bg-primary-600 h-2.5 rounded-full"
-                                style={{ width: `${course.progress}%` }}
-                              ></div>
-                            </div>
-                            <span className="ml-3 text-sm font-medium text-gray-700">{course.progress}%</span>
+              ) : (
+                <div className="divide-y divide-gray-100">
+                  {enrollments.slice(0, 3).map((enrollment) => (
+                    <div key={enrollment.id} className="p-6 flex items-start">
+                      <div className="relative h-16 w-16 flex-shrink-0 rounded overflow-hidden">
+                        {enrollment.course.imageUrl ? (
+                          <Image 
+                            src={enrollment.course.imageUrl} 
+                            alt={enrollment.course.title} 
+                            fill 
+                            className="object-cover" 
+                          />
+                        ) : (
+                          <div className="h-full w-full bg-gray-200 flex items-center justify-center">
+                            <Book className="h-6 w-6 text-gray-400" />
                           </div>
-                          <p className="mt-1 text-xs text-gray-500">Last accessed: {course.lastAccessed}</p>
+                        )}
+                      </div>
+                      
+                      <div className="ml-4 flex-grow">
+                        <h3 className="text-base font-medium text-gray-900">{enrollment.course.title}</h3>
+                        <p className="text-sm text-gray-500">
+                          Instructor: {enrollment.course.tutor.user.name}
+                        </p>
+                        
+                        <div className="mt-2">
+                          <div className="flex justify-between text-xs text-gray-600 mb-1">
+                            <span>Progress</span>
+                            <span>{Math.round(enrollment.progress)}%</span>
+                          </div>
+                          <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                            <div 
+                              className="h-full bg-primary-600" 
+                              style={{ width: `${enrollment.progress}%` }}
+                            ></div>
+                          </div>
                         </div>
                       </div>
-                      <div className="mt-4 sm:mt-0 sm:ml-4">
-                        <Button size="sm">Continue</Button>
+                      
+                      <div className="ml-4">
+                        <Link 
+                          href={`/dashboard/courses/${enrollment.course.id}`}
+                          className="text-sm text-primary-600 hover:text-primary-700 font-medium"
+                        >
+                          Continue
+                        </Link>
                       </div>
                     </div>
                   ))}
                 </div>
+              )}
+            </div>
+            
+            {/* Recent Orders */}
+            <div className="bg-white rounded-lg shadow-sm overflow-hidden mt-8">
+              <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center">
+                <h2 className="text-xl font-bold text-gray-900">Recent Orders</h2>
+                <Link href="/orders" className="text-sm text-primary-600 hover:text-primary-700 font-medium">
+                  View all
+                </Link>
               </div>
-
-              {/* Upcoming Tutoring Sessions */}
-              <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-xl font-bold text-gray-900">Upcoming Tutoring Sessions</h2>
-                  <Link href="/dashboard/sessions" className="text-sm font-medium text-primary-600 hover:text-primary-500">
-                    View all
-                  </Link>
-                </div>
-                {upcomingTutoringSessions.length > 0 ? (
-                  <div className="space-y-4">
-                    {upcomingTutoringSessions.map((session) => (
-                      <div key={session.id} className="border rounded-lg p-4">
-                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-                          <div>
-                            <h3 className="font-medium text-gray-900">{session.subject} with {session.tutor}</h3>
-                            <p className="text-sm text-gray-600">{session.date} • {session.time}</p>
-                          </div>
-                          <div className="mt-2 sm:mt-0 flex items-center">
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                              session.status === 'confirmed'
-                                ? 'bg-green-100 text-green-800'
-                                : 'bg-yellow-100 text-yellow-800'
-                            }`}>
-                              {session.status === 'confirmed' ? 'Confirmed' : 'Pending'}
-                            </span>
-                            <div className="ml-4">
-                              <Button size="sm" variant={session.status === 'confirmed' ? 'primary' : 'outline'}>
-                                {session.status === 'confirmed' ? 'Join Session' : 'Confirm'}
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
+              
+              {recentOrders.length === 0 ? (
+                <div className="p-6 text-center">
+                  <div className="mx-auto h-16 w-16 text-gray-400">
+                    <ShoppingBag className="h-full w-full" />
                   </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                    <h3 className="mt-2 text-sm font-medium text-gray-900">No upcoming sessions</h3>
-                    <p className="mt-1 text-sm text-gray-500">Get started by booking a session with a tutor.</p>
-                    <div className="mt-6">
-                      <Button>Find a Tutor</Button>
+                  <h3 className="mt-4 text-lg font-medium text-gray-900">No orders yet</h3>
+                  <p className="mt-2 text-gray-600">Your purchase history will appear here</p>
+                  <div className="mt-6">
+                    <Link href="/courses">
+                      <Button>Browse Courses</Button>
+                    </Link>
+                  </div>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Order ID
+                        </th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Date
+                        </th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Status
+                        </th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Total
+                        </th>
+                        <th scope="col" className="relative px-6 py-3">
+                          <span className="sr-only">View</span>
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {recentOrders.slice(0, 3).map((order) => (
+                        <tr key={order.id} className="hover:bg-gray-50">
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                            #{order.id.substring(0, 8)}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {formatDate(order.createdAt)}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${order.status.toLowerCase() === 'completed' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'}`}>
+                              {order.status.charAt(0).toUpperCase() + order.status.slice(1).toLowerCase()}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {formatPrice(order.totalAmount)}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <Link 
+                              href={`/orders/${order.id}`}
+                              className="text-primary-600 hover:text-primary-900"
+                            >
+                              View
+                            </Link>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+          
+          {/* User Profile & Stats */}
+          <div className="space-y-8">
+            {/* User Profile */}
+            <div className="bg-white rounded-lg shadow-sm p-6">
+              <div className="flex items-center mb-6">
+                <div className="relative h-16 w-16 rounded-full overflow-hidden bg-gray-200">
+                  {userProfile?.image ? (
+                    <Image 
+                      src={userProfile.image} 
+                      alt={userProfile.name || 'User'} 
+                      fill 
+                      className="object-cover" 
+                    />
+                  ) : (
+                    <div className="h-full w-full flex items-center justify-center">
+                      <User className="h-8 w-8 text-gray-400" />
                     </div>
+                  )}
+                </div>
+                <div className="ml-4">
+                  <h2 className="text-xl font-bold text-gray-900">{userProfile?.name || 'User'}</h2>
+                  <p className="text-sm text-gray-600">{userProfile?.email}</p>
+                </div>
+              </div>
+              
+              <div className="space-y-3">
+                {userProfile?.profile?.bio && (
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-900">Bio</h4>
+                    <p className="text-sm text-gray-600 mt-1">{userProfile.profile.bio}</p>
+                  </div>
+                )}
+                
+                {userProfile?.profile?.phoneNumber && (
+                  <div className="flex">
+                    <span className="text-sm font-medium text-gray-900 w-24">Phone:</span>
+                    <span className="text-sm text-gray-600">{userProfile.profile.phoneNumber}</span>
+                  </div>
+                )}
+                
+                {userProfile?.profile?.address && (
+                  <div className="flex">
+                    <span className="text-sm font-medium text-gray-900 w-24">Address:</span>
+                    <span className="text-sm text-gray-600">
+                      {userProfile.profile.address}, 
+                      {userProfile.profile.city && ` ${userProfile.profile.city},`}
+                      {userProfile.profile.state && ` ${userProfile.profile.state},`}
+                      {userProfile.profile.zipCode && ` ${userProfile.profile.zipCode},`}
+                      {userProfile.profile.country && ` ${userProfile.profile.country}`}
+                    </span>
                   </div>
                 )}
               </div>
-
-              {/* Recommended Courses */}
-              <div className="bg-white rounded-lg shadow-sm p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-xl font-bold text-gray-900">Recommended for You</h2>
-                  <Link href="/courses" className="text-sm font-medium text-primary-600 hover:text-primary-500">
-                    Browse all courses
-                  </Link>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {recommendedCourses.map((course) => (
-                    <div key={course.id} className="border rounded-lg overflow-hidden">
-                      <div className="relative h-36 bg-gray-200">
-                        {/* Course thumbnail placeholder */}
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <span className="text-gray-500">Thumbnail</span>
-                        </div>
-                      </div>
-                      <div className="p-4">
-                        <h3 className="font-medium text-gray-900 text-sm line-clamp-2">{course.title}</h3>
-                        <p className="text-xs text-gray-600 mt-1">{course.instructor}</p>
-                        <div className="flex items-center mt-1">
-                          <span className="text-yellow-400 text-xs">{'★'.repeat(Math.floor(course.rating))}</span>
-                          <span className="text-xs text-gray-600 ml-1">{course.rating} ({course.ratingCount})</span>
-                        </div>
-                        <div className="mt-2 flex items-center justify-between">
-                          <span className="text-sm font-medium text-gray-900">{formatPrice(course.price)}</span>
-                          <Button size="sm" variant="outline">Add to Cart</Button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+              
+              <div className="mt-6">
+                <Link href="/profile">
+                  <Button variant="outline" className="w-full">Edit Profile</Button>
+                </Link>
               </div>
             </div>
-
-            <div className="lg:col-span-1">
-              {/* Profile Summary */}
-              <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
+            
+            {/* Learning Stats */}
+            <div className="bg-white rounded-lg shadow-sm p-6">
+              <h2 className="text-xl font-bold text-gray-900 mb-6">Learning Stats</h2>
+              
+              <div className="space-y-6">
                 <div className="flex items-center">
-                  <div className="relative h-16 w-16 rounded-full overflow-hidden bg-primary-100 flex items-center justify-center">
-                    <span className="text-xl text-primary-700 font-medium">AJ</span>
+                  <div className="p-2 rounded-full bg-blue-100 text-blue-600 mr-3">
+                    <Book className="h-5 w-5" />
                   </div>
-                  <div className="ml-4">
-                    <h2 className="text-lg font-medium text-gray-900">Alex Johnson</h2>
-                    <p className="text-sm text-gray-600">Student</p>
-                  </div>
-                </div>
-                <div className="mt-6 border-t pt-6">
-                  <div className="flex justify-between items-center mb-4">
-                    <span className="text-sm font-medium text-gray-500">Profile completion</span>
-                    <span className="text-sm font-medium text-gray-900">85%</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2.5">
-                    <div className="bg-primary-600 h-2.5 rounded-full" style={{ width: '85%' }}></div>
-                  </div>
-                  <div className="mt-4">
-                    <Button variant="outline" size="sm" className="w-full">Complete Your Profile</Button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Recent Achievements */}
-              <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
-                <h2 className="text-xl font-bold text-gray-900 mb-6">Recent Achievements</h2>
-                <div className="space-y-4">
-                  {recentAchievements.map((achievement) => (
-                    <div key={achievement.id} className="flex items-start">
-                      <div className="flex-shrink-0 h-10 w-10 rounded-full bg-primary-50 flex items-center justify-center text-xl">
-                        {achievement.icon}
-                      </div>
-                      <div className="ml-3">
-                        <h3 className="text-sm font-medium text-gray-900">{achievement.title}</h3>
-                        <p className="text-xs text-gray-600">{achievement.description}</p>
-                        <p className="text-xs text-gray-500 mt-1">{achievement.date}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <div className="mt-6">
-                  <Link href="/dashboard/achievements" className="text-sm font-medium text-primary-600 hover:text-primary-500">
-                    View all achievements
-                  </Link>
-                </div>
-              </div>
-
-              {/* Learning Stats */}
-              <div className="bg-white rounded-lg shadow-sm p-6">
-                <h2 className="text-xl font-bold text-gray-900 mb-6">Learning Stats</h2>
-                <div className="space-y-4">
                   <div>
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-sm font-medium text-gray-500">Weekly Goal</span>
-                      <span className="text-sm font-medium text-gray-900">10 hours</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2.5">
-                      <div className="bg-green-500 h-2.5 rounded-full" style={{ width: '85%' }}></div>
-                    </div>
-                    <p className="text-xs text-gray-600 mt-1">8.5 hours completed this week</p>
+                    <h3 className="text-sm font-medium text-gray-900">{enrollmentStats.totalEnrollments} Courses</h3>
+                    <p className="text-xs text-gray-500">Enrolled in your learning journey</p>
                   </div>
-                  
+                </div>
+                
+                <div className="flex items-center">
+                  <div className="p-2 rounded-full bg-green-100 text-green-600 mr-3">
+                    <CheckCircle className="h-5 w-5" />
+                  </div>
                   <div>
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-sm font-medium text-gray-500">Current Streak</span>
-                      <span className="text-sm font-medium text-gray-900">7 days</span>
-                    </div>
-                    <div className="flex justify-between">
-                      {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((day, index) => (
-                        <div key={index} className="flex flex-col items-center">
-                          <div className={`h-8 w-8 rounded-full flex items-center justify-center text-xs ${
-                            index < 7 ? 'bg-primary-100 text-primary-700' : 'bg-gray-100 text-gray-400'
-                          }`}>
-                            {day}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+                    <h3 className="text-sm font-medium text-gray-900">{enrollmentStats.completedCourses} Completed</h3>
+                    <p className="text-xs text-gray-500">Courses you've finished</p>
                   </div>
-                  
-                  <div className="pt-4 border-t">
-                    <h3 className="text-sm font-medium text-gray-900 mb-2">Top Skills</h3>
-                    <div className="space-y-2">
-                      <div>
-                        <div className="flex justify-between items-center mb-1">
-                          <span className="text-xs text-gray-600">JavaScript</span>
-                          <span className="text-xs text-gray-600">Advanced</span>
-                        </div>
-                        <div className="w-full bg-gray-200 rounded-full h-1.5">
-                          <div className="bg-blue-500 h-1.5 rounded-full" style={{ width: '85%' }}></div>
-                        </div>
-                      </div>
-                      <div>
-                        <div className="flex justify-between items-center mb-1">
-                          <span className="text-xs text-gray-600">Python</span>
-                          <span className="text-xs text-gray-600">Intermediate</span>
-                        </div>
-                        <div className="w-full bg-gray-200 rounded-full h-1.5">
-                          <div className="bg-blue-500 h-1.5 rounded-full" style={{ width: '65%' }}></div>
-                        </div>
-                      </div>
-                      <div>
-                        <div className="flex justify-between items-center mb-1">
-                          <span className="text-xs text-gray-600">Data Science</span>
-                          <span className="text-xs text-gray-600">Beginner</span>
-                        </div>
-                        <div className="w-full bg-gray-200 rounded-full h-1.5">
-                          <div className="bg-blue-500 h-1.5 rounded-full" style={{ width: '35%' }}></div>
-                        </div>
-                      </div>
-                    </div>
+                </div>
+                
+                <div className="flex items-center">
+                  <div className="p-2 rounded-full bg-purple-100 text-purple-600 mr-3">
+                    <Award className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-900">{Math.round(enrollmentStats.averageProgress)}% Average</h3>
+                    <p className="text-xs text-gray-500">Overall course completion</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center">
+                  <div className="p-2 rounded-full bg-amber-100 text-amber-600 mr-3">
+                    <ShoppingBag className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-900">{formatPrice(orderStats.totalSpent)}</h3>
+                    <p className="text-xs text-gray-500">Invested in your education</p>
                   </div>
                 </div>
               </div>

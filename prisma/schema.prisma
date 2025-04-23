@@ -1,0 +1,186 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  password      String?
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  profile       Profile?
+  tutorProfile  Tutor?
+  cartItems     CartItem[]
+  orders        Order[]
+  reviews       Review[]
+  enrollments   Enrollment[]
+}
+
+model Profile {
+  id          String   @id @default(cuid())
+  bio         String?
+  phoneNumber String?
+  address     String?
+  city        String?
+  state       String?
+  zipCode     String?
+  country     String?
+  userId      String   @unique
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+enum Level {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+model Course {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  price       Float
+  imageUrl    String?
+  duration    Int      // in minutes
+  level       Level    @default(BEGINNER)
+  category    String
+  featured    Boolean  @default(false)
+  published   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  tutorId     String
+  tutor       Tutor    @relation(fields: [tutorId], references: [id])
+  
+  cartItems   CartItem[]
+  orderItems  OrderItem[]
+  reviews     Review[]
+  enrollments Enrollment[]
+}
+
+model Tutor {
+  id             String   @id @default(cuid())
+  specialization String
+  hourlyRate     Float
+  availability   Json?    // JSON array of available time slots
+  rating         Float    @default(0)
+  bio            String
+  experience     Int      // years of experience
+  education      String
+  userId         String   @unique
+  location       String?
+  latitude       Float?
+  longitude      Float?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  courses        Course[]
+  reviews        Review[]
+}
+
+model CartItem {
+  id        String   @id @default(cuid())
+  quantity  Int      @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  courseId  String
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+model Order {
+  id             String      @id @default(cuid())
+  totalAmount    Float
+  status         OrderStatus @default(PENDING)
+  paymentMethod  String?
+  paymentIntentId String?    // ID from Stripe payment intent
+  paidAt         DateTime?
+  lastError      String?
+  billingAddress Json?       // Billing address information
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  
+  userId         String
+  user           User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  orderItems     OrderItem[]
+  enrollments    Enrollment[]
+}
+
+model OrderItem {
+  id        String   @id @default(cuid())
+  quantity  Int
+  price     Float
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  
+  courseId  String
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  rating    Int
+  comment   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  courseId  String?
+  course    Course?  @relation(fields: [courseId], references: [id], onDelete: SetNull)
+  
+  tutorId   String?
+  tutor     Tutor?   @relation(fields: [tutorId], references: [id], onDelete: SetNull)
+}
+
+model Enrollment {
+  id             String   @id @default(cuid())
+  enrollmentDate DateTime @default(now())
+  completionDate DateTime?
+  progress       Float    @default(0) // Percentage of course completed
+  lastAccessedAt DateTime @default(now())
+  status         String   @default("active") // active, completed, paused
+  
+  orderId        String?
+  order          Order?   @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  courseId       String
+  course         Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, courseId])
+}
