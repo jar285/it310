@@ -3,8 +3,118 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import MainLayout from '@/components/layout/main-layout';
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { signIn } from 'next-auth/react';
 
 export default function RegisterPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+    userType: 'student' // Default to student
+  });
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [redirectUrl, setRedirectUrl] = useState('');
+
+  useEffect(() => {
+    // Check for callbackUrl in query parameters
+    const callbackUrl = searchParams.get('callbackUrl');
+    if (callbackUrl) {
+      setRedirectUrl(callbackUrl);
+    } else {
+      // Check if there's a stored redirect URL in localStorage
+      const storedRedirect = localStorage.getItem('loginRedirect');
+      if (storedRedirect) {
+        setRedirectUrl(storedRedirect);
+      } else {
+        // Default redirect to dashboard
+        setRedirectUrl('/dashboard');
+      }
+    }
+  }, [searchParams]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+
+    // Validate form
+    if (formData.password !== formData.confirmPassword) {
+      setError('Passwords do not match');
+      return;
+    }
+
+    if (formData.password.length < 6) {
+      setError('Password must be at least 6 characters');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      // Prepare user data
+      const userData = {
+        name: `${formData.firstName} ${formData.lastName}`,
+        email: formData.email,
+        password: formData.password,
+        userType: formData.userType
+      };
+
+      // Send registration request
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(userData),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Registration failed');
+      }
+
+      // Clear the stored redirect URL
+      localStorage.removeItem('loginRedirect');
+
+      // Auto login after successful registration
+      await signIn('credentials', {
+        redirect: false,
+        email: formData.email,
+        password: formData.password,
+      });
+
+      // Redirect to the appropriate page
+      router.push(redirectUrl);
+      router.refresh();
+    } catch (error: any) {
+      setError(error.message || 'An error occurred during registration');
+      console.error('Registration error:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSocialSignIn = (provider: string) => {
+    // Clear the stored redirect URL as it will be handled by the callback
+    localStorage.removeItem('loginRedirect');
+    signIn(provider, { callbackUrl: redirectUrl });
+  };
+
   return (
     <MainLayout>
       <div className="flex min-h-[calc(100vh-64px-64px)] flex-col justify-center py-12 sm:px-6 lg:px-8 bg-gray-50">
@@ -22,36 +132,49 @@ export default function RegisterPage() {
 
         <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
           <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
-            <form className="space-y-6" action="#" method="POST">
+            {error && (
+              <div className="mb-4 rounded-md bg-red-50 p-4">
+                <div className="flex">
+                  <div className="ml-3">
+                    <h3 className="text-sm font-medium text-red-800">{error}</h3>
+                  </div>
+                </div>
+              </div>
+            )}
+            <form className="space-y-6" onSubmit={handleSubmit}>
               <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                 <div>
-                  <label htmlFor="first-name" className="block text-sm font-medium leading-6 text-gray-900">
+                  <label htmlFor="firstName" className="block text-sm font-medium leading-6 text-gray-900">
                     First name
                   </label>
                   <div className="mt-2">
                     <Input
-                      id="first-name"
-                      name="first-name"
+                      id="firstName"
+                      name="firstName"
                       type="text"
                       autoComplete="given-name"
                       required
                       className="block w-full"
+                      value={formData.firstName}
+                      onChange={handleChange}
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label htmlFor="last-name" className="block text-sm font-medium leading-6 text-gray-900">
+                  <label htmlFor="lastName" className="block text-sm font-medium leading-6 text-gray-900">
                     Last name
                   </label>
                   <div className="mt-2">
                     <Input
-                      id="last-name"
-                      name="last-name"
+                      id="lastName"
+                      name="lastName"
                       type="text"
                       autoComplete="family-name"
                       required
                       className="block w-full"
+                      value={formData.lastName}
+                      onChange={handleChange}
                     />
                   </div>
                 </div>
@@ -69,6 +192,8 @@ export default function RegisterPage() {
                     autoComplete="email"
                     required
                     className="block w-full"
+                    value={formData.email}
+                    onChange={handleChange}
                   />
                 </div>
               </div>
@@ -85,66 +210,65 @@ export default function RegisterPage() {
                     autoComplete="new-password"
                     required
                     className="block w-full"
+                    value={formData.password}
+                    onChange={handleChange}
                   />
                 </div>
               </div>
 
               <div>
-                <label htmlFor="confirm-password" className="block text-sm font-medium leading-6 text-gray-900">
+                <label htmlFor="confirmPassword" className="block text-sm font-medium leading-6 text-gray-900">
                   Confirm password
                 </label>
                 <div className="mt-2">
                   <Input
-                    id="confirm-password"
-                    name="confirm-password"
+                    id="confirmPassword"
+                    name="confirmPassword"
                     type="password"
                     autoComplete="new-password"
                     required
                     className="block w-full"
+                    value={formData.confirmPassword}
+                    onChange={handleChange}
                   />
                 </div>
               </div>
 
               <div>
-                <label htmlFor="user-type" className="block text-sm font-medium leading-6 text-gray-900">
-                  I want to
+                <label htmlFor="userType" className="block text-sm font-medium leading-6 text-gray-900">
+                  I am a
                 </label>
                 <div className="mt-2">
                   <select
-                    id="user-type"
-                    name="user-type"
+                    id="userType"
+                    name="userType"
                     className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-primary-600 sm:text-sm sm:leading-6"
+                    value={formData.userType}
+                    onChange={handleChange}
                   >
-                    <option value="student">Learn - I'm a student</option>
-                    <option value="tutor">Teach - I'm a tutor</option>
-                    <option value="both">Both learn and teach</option>
+                    <option value="student">Student</option>
+                    <option value="tutor">Tutor</option>
                   </select>
                 </div>
               </div>
 
-              <div className="flex items-center">
-                <input
-                  id="terms"
-                  name="terms"
-                  type="checkbox"
-                  required
-                  className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-600"
-                />
-                <label htmlFor="terms" className="ml-2 block text-sm text-gray-900">
-                  I agree to the{' '}
-                  <a href="#" className="font-medium text-primary-600 hover:text-primary-500">
-                    Terms of Service
-                  </a>{' '}
-                  and{' '}
-                  <a href="#" className="font-medium text-primary-600 hover:text-primary-500">
-                    Privacy Policy
-                  </a>
-                </label>
-              </div>
-
               <div>
-                <Button type="submit" className="w-full">
-                  Create account
+                <Button 
+                  type="submit" 
+                  className="flex w-full justify-center"
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Creating account...
+                    </>
+                  ) : (
+                    'Create account'
+                  )}
                 </Button>
               </div>
             </form>
@@ -159,10 +283,11 @@ export default function RegisterPage() {
                 </div>
               </div>
 
-              <div className="mt-6 grid grid-cols-3 gap-3">
+              <div className="mt-6 grid grid-cols-2 gap-3">
                 <div>
-                  <a
-                    href="#"
+                  <button
+                    type="button"
+                    onClick={() => handleSocialSignIn('google')}
                     className="inline-flex w-full justify-center rounded-md bg-white px-4 py-2 text-gray-500 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:outline-offset-0"
                   >
                     <span className="sr-only">Sign up with Google</span>
@@ -171,28 +296,13 @@ export default function RegisterPage() {
                         d="M12.48 10.92v3.28h7.84c-.24 1.84-.853 3.187-1.787 4.133-1.147 1.147-2.933 2.4-6.053 2.4-4.827 0-8.6-3.893-8.6-8.72s3.773-8.72 8.6-8.72c2.6 0 4.507 1.027 5.907 2.347l2.307-2.307C18.747 1.44 16.133 0 12.48 0 5.867 0 .307 5.387.307 12s5.56 12 12.173 12c3.573 0 6.267-1.173 8.373-3.36 2.16-2.16 2.84-5.213 2.84-7.667 0-.76-.053-1.467-.173-2.053H12.48z"
                       />
                     </svg>
-                  </a>
+                  </button>
                 </div>
 
                 <div>
-                  <a
-                    href="#"
-                    className="inline-flex w-full justify-center rounded-md bg-white px-4 py-2 text-gray-500 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:outline-offset-0"
-                  >
-                    <span className="sr-only">Sign up with Facebook</span>
-                    <svg className="h-5 w-5" aria-hidden="true" fill="currentColor" viewBox="0 0 24 24">
-                      <path
-                        fillRule="evenodd"
-                        d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                  </a>
-                </div>
-
-                <div>
-                  <a
-                    href="#"
+                  <button
+                    type="button"
+                    onClick={() => handleSocialSignIn('github')}
                     className="inline-flex w-full justify-center rounded-md bg-white px-4 py-2 text-gray-500 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:outline-offset-0"
                   >
                     <span className="sr-only">Sign up with GitHub</span>
@@ -203,7 +313,7 @@ export default function RegisterPage() {
                         clipRule="evenodd"
                       />
                     </svg>
-                  </a>
+                  </button>
                 </div>
               </div>
             </div>
