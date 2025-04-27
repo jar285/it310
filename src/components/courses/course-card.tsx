@@ -35,7 +35,7 @@ export default function CourseCard({ course }: CourseCardProps) {
   const { data: session } = useSession();
   const router = useRouter();
   const [isAddingToCart, setIsAddingToCart] = useState(false);
-  const { incrementCartCount } = useCart();
+  const { incrementCartCount, updateCartCount } = useCart();
   
   // Format price to 2 decimal places with currency symbol
   const formattedPrice = new Intl.NumberFormat('en-US', {
@@ -75,10 +75,11 @@ export default function CourseCard({ course }: CourseCardProps) {
       });
       
       if (response.ok) {
-        // Update cart count in the context
+        // Optimistically bump badge
         incrementCartCount();
-        
-        // Show success message or redirect to cart
+        // Sync with backend
+        await updateCartCount();
+        // Redirect to cart
         router.push('/cart');
       } else {
         const data = await response.json();
@@ -93,7 +94,7 @@ export default function CourseCard({ course }: CourseCardProps) {
   };
 
   return (
-    <div className="group relative overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm transition-all hover:shadow-md">
+    <div className="group relative overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm transition-all duration-300 hover:shadow-md hover:border-primary-300">
       {course.featured && (
         <div className="absolute left-0 top-4 z-10 bg-primary-600 px-3 py-1 text-xs font-semibold text-white shadow-sm">
           Featured
@@ -166,10 +167,10 @@ export default function CourseCard({ course }: CourseCardProps) {
           </Button>
         </div>
       </div>
-      <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-0 opacity-0 transition-all group-hover:bg-opacity-10 group-hover:opacity-100">
+      <div className="absolute inset-0 flex items-center justify-center bg-primary-600 bg-opacity-0 opacity-0 transition-all duration-300 group-hover:bg-opacity-5 group-hover:opacity-100">
         <Link
           href={`/courses/${course.id}`}
-          className="rounded-md bg-primary-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
+          className="transform scale-95 transition-transform duration-300 group-hover:scale-100 rounded-md bg-white border border-primary-600 px-4 py-2 text-sm font-medium text-primary-600 shadow-sm hover:bg-primary-50 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
         >
           View Course
         </Link>

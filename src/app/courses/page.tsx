@@ -143,14 +143,14 @@ export default function CoursesPage() {
             </div>
           </div>
 
-          <div className="mt-8 grid grid-cols-1 gap-8 md:grid-cols-4">
+          <div className="mt-8 flex flex-col md:flex-row gap-8">
             {/* Filters */}
-            <div className="hidden md:block">
+            <div className="w-full md:w-64 flex-shrink-0">
               <CourseFilters categories={categories} />
             </div>
 
             {/* Course Grid */}
-            <div className="md:col-span-3">
+            <div className="flex-1">
               {loading ? (
                 <div className="flex h-64 w-full items-center justify-center">
                   <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary-600 border-t-transparent"></div>

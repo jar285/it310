@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import { useCart } from '@/context/cart-context';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -30,6 +31,7 @@ interface CartItem {
 export default function CartPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const { updateCartCount } = useCart();
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [cartTotal, setCartTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -43,8 +45,9 @@ export default function CartPage() {
 
     if (status === 'authenticated') {
       fetchCart();
+      updateCartCount();
     }
-  }, [status, router]);
+  }, [status, router, updateCartCount]);
 
   const fetchCart = async () => {
     try {
