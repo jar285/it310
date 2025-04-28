@@ -1,9 +1,15 @@
 import { prisma } from '../prisma';
-import { Tutor, Review, User } from '@prisma/client';
+import { Tutor, Review, Course } from '@prisma/client';
 
 export type TutorWithRelations = Tutor & {
-  user: User;
-  reviews?: Review[];
+  user: {
+    id: string;
+    name: string | null;
+    email: string;
+    image: string | null;
+  };
+  reviews?: (Review & { user: { name: string | null; image: string | null } })[];
+  courses?: Course[];
   _count?: {
     reviews: number;
     courses: number;
@@ -127,19 +133,8 @@ export const tutorRepository = {
       take: limit,
       orderBy: { rating: 'desc' },
       include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            image: true
-          }
-        },
-        _count: {
-          select: {
-            reviews: true,
-            courses: true
-          }
-        }
+        user: { select: { id: true, name: true, email: true, image: true } },
+        _count: { select: { reviews: true, courses: true } }
       }
     });
   },

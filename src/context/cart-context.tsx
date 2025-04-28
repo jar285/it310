@@ -5,7 +5,7 @@ import { useSession } from 'next-auth/react';
 
 interface CartContextType {
   cartItemCount: number;
-  updateCartCount: () => Promise<void>;
+  updateCartCount: () => Promise<number>;
   incrementCartCount: () => void;
   decrementCartCount: () => void;
   setCartCount: (count: number) => void;
@@ -13,7 +13,7 @@ interface CartContextType {
 
 const CartContext = createContext<CartContextType>({
   cartItemCount: 0,
-  updateCartCount: async () => {},
+  updateCartCount: async () => 0,
   incrementCartCount: () => {},
   decrementCartCount: () => {},
   setCartCount: () => {},
@@ -26,21 +26,20 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const { data: session, status } = useSession();
   const isAuthenticated = status === 'authenticated';
 
-  const updateCartCount = async () => {
-    if (isAuthenticated) {
-      try {
-        const response = await fetch('/api/cart');
-        if (response.ok) {
-          const data = await response.json();
-          // Calculate total quantity of items in cart
-          const totalQuantity = data.items?.reduce((total: number, item: any) => total + item.quantity, 0) || 0;
-          setCartItemCount(totalQuantity);
-        }
-      } catch (error) {
-        console.error('Error fetching cart:', error);
-      }
-    } else {
-      setCartItemCount(0);
+  const updateCartCount = async (): Promise<number> => {
+    try {
+      console.log("Fetching cart count...");
+      const response = await fetch('/api/cart', { credentials: 'include' });
+      if (!response.ok) throw new Error('Failed to fetch cart');
+      const data = await response.json();
+      console.log("Cart data received:", data);
+      const totalQuantity = data.items?.reduce((total: number, item: any) => total + item.quantity, 0) || 0;
+      console.log("Setting cart count to:", totalQuantity);
+      setCartItemCount(totalQuantity);
+      return totalQuantity;
+    } catch (error) {
+      console.error('Error updating cart count:', error);
+      return cartItemCount;
     }
   };
 

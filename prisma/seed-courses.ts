@@ -1,4 +1,7 @@
-const { PrismaClient, Level } = require('@prisma/client');
+#!/usr/bin/env -S node --no-warnings --loader ts-node/esm
+
+import { PrismaClient, Level } from '@prisma/client';
+export {};
 
 const prisma = new PrismaClient();
 
@@ -45,7 +48,15 @@ async function main() {
   ];
 
   // Sample course data
-  const coursesData = [
+  const coursesData: {
+    title: string;
+    description: string;
+    price: number;
+    duration: number;
+    level: Level;
+    category: string;
+    featured: boolean;
+  }[] = [
     {
       title: 'Complete JavaScript Masterclass',
       description: 'Master JavaScript from the basics to advanced concepts. Learn modern ES6+ features, asynchronous programming, and build real-world applications.',

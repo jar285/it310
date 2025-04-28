@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
@@ -13,9 +13,27 @@ export default function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
   const { data: session, status } = useSession();
-  const { cartItemCount } = useCart();
+  const { cartItemCount, updateCartCount } = useCart();
+  const [cartBounce, setCartBounce] = useState(false);
+  const prevCartCount = useRef(cartItemCount);
   const isAuthenticated = status === 'authenticated';
   const isLoading = status === 'loading';
+
+  useEffect(() => {
+    if (cartItemCount > prevCartCount.current) {
+      setCartBounce(true);
+      const timer = setTimeout(() => setCartBounce(false), 200);
+      return () => clearTimeout(timer);
+    }
+    prevCartCount.current = cartItemCount;
+  }, [cartItemCount]);
+
+  useEffect(() => {
+    console.log("Navbar useEffect fired", { pathname, isAuthenticated, status });
+    if (isAuthenticated) {
+      updateCartCount().then((count) => console.log("Navbar count updated to", count));
+    }
+  }, [pathname, isAuthenticated, status, updateCartCount]);
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
@@ -80,7 +98,7 @@ export default function Navbar() {
               <div className="relative">
                 <ShoppingCart className="h-6 w-6" />
                 {cartItemCount > 0 && (
-                  <span className="absolute -top-2 -right-2 bg-primary-600 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center z-10">
+                  <span className={`absolute -top-2 -right-2 bg-primary-600 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center z-10 transform transition-transform duration-200 ${cartBounce ? 'scale-125' : ''}`}>
                     {cartItemCount}
                   </span>
                 )}
@@ -135,7 +153,7 @@ export default function Navbar() {
               <div className="relative">
                 <ShoppingCart className="h-6 w-6" />
                 {cartItemCount > 0 && (
-                  <span className="absolute -top-2 -right-2 bg-primary-600 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center z-10">
+                  <span className={`absolute -top-2 -right-2 bg-primary-600 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center z-10 transform transition-transform duration-200 ${cartBounce ? 'scale-125' : ''}`}>
                     {cartItemCount}
                   </span>
                 )}

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Poppins } from "next/font/google";
 import "./globals.css";
 import AuthProvider from "@/providers/auth-provider";
+import { CartProvider } from "@/context/cart-context";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -30,7 +31,11 @@ export default function RootLayout({
         suppressHydrationWarning
         className={`${inter.variable} ${poppins.variable} font-sans antialiased`}
       >
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+          <CartProvider>
+            {children}
+          </CartProvider>
+        </AuthProvider>
       </body>
     </html>
   );

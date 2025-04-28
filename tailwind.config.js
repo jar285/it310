@@ -7,54 +7,53 @@ module.exports = {
   ],
   theme: {
     extend: {
+      // 1. Colors: deep indigo primary + muted sage accent
       colors: {
         primary: {
-          50: '#f0f9ff',
-          100: '#e0f2fe',
-          200: '#bae6fd',
-          300: '#7dd3fc',
-          400: '#38bdf8',
-          500: '#0ea5e9',
-          600: '#0284c7',
-          700: '#0369a1',
-          800: '#075985',
-          900: '#0c4a6e',
-          950: '#082f49',
-        },
-        secondary: {
-          50: '#f5f3ff',
-          100: '#ede9fe',
-          200: '#ddd6fe',
-          300: '#c4b5fd',
-          400: '#a78bfa',
-          500: '#8b5cf6',
-          600: '#7c3aed',
-          700: '#6d28d9',
-          800: '#5b21b6',
-          900: '#4c1d95',
-          950: '#2e1065',
+          50:  '#f2f5fa',
+          100: '#e1e8f2',
+          200: '#bcc9e2',
+          300: '#8ea8d0',
+          400: '#5f86be',
+          500: '#345fa9', // base
+          600: '#2e5598',
+          700: '#264b85',
+          800: '#1e4070',
+          900: '#182e53',
         },
         accent: {
-          50: '#fffbeb',
-          100: '#fef3c7',
-          200: '#fde68a',
-          300: '#fcd34d',
-          400: '#fbbf24',
-          500: '#f59e0b',
-          600: '#d97706',
-          700: '#b45309',
-          800: '#92400e',
-          900: '#78350f',
-          950: '#451a03',
+          50:  '#f6f7f5',
+          100: '#e7e9e5',
+          200: '#cfd3ca',
+          300: '#b5b8ab',
+          400: '#9ba78b',
+          500: '#7d9d9c', // sage green
+          600: '#738b8a',
+          700: '#647877',
+          800: '#556664',
+          900: '#3b4f4d',
         },
+        // you can still keep your old secondary / accent-bright sets
       },
+
+      // 2. Typography: serif for headings, humanist sans for body
       fontFamily: {
-        sans: ['var(--font-inter)', 'sans-serif'],
-        heading: ['var(--font-poppins)', 'sans-serif'],
+        // keep your Inter for everything else if you like
+        sans: ['Source Sans Pro', 'sans-serif'],
+        serif: ['Merriweather', 'serif'],
+        heading: ['Merriweather', 'serif'],
+      },
+
+      // Optional: a softer background
+      backgroundColor: {
+        page: '#F8F5F0',
       },
     },
   },
+
+  // 3. Add the official typography plugin for beautiful prose defaults
   plugins: [
     require('@tailwindcss/forms'),
+    require('@tailwindcss/typography'),
   ],
-}
+};

@@ -119,11 +119,11 @@ export default function CourseDetailPage({ params }: CourseDetailPageProps) {
       });
       
       if (response.ok) {
-        // Update cart count in the context - use updateCartCount instead of incrementCartCount
-        // to ensure accurate count from the server
+        // Optimistically bump badge
+        incrementCartCount();
+        // Sync with backend
         await updateCartCount();
-        
-        // Show success message or redirect to cart
+        // Redirect to cart
         router.push('/cart');
       } else {
         const data = await response.json();
