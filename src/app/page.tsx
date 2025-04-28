@@ -5,6 +5,20 @@ import { Button } from "@/components/ui/button";
 import MainLayout from "@/components/layout/main-layout";
 
 export default function Home() {
+  // Place your own course images in public/images and reference here
+  const placeholderCourses = [
+    { id: 1, imageUrl: '/react-basics.jpg', category: 'Web Development', rating: 4.5, title: 'Mastering React Basics', description: 'Build dynamic UIs and components using React.js.', price: 49.99 },
+    { id: 2, imageUrl: '/python-data-science.jpg', category: 'Data Science', rating: 4.7, title: 'Python for Data Science', description: 'Analyze and visualize data with Python.', price: 59.99 },
+    { id: 3, imageUrl: '/ux-design.jpg', category: 'UI/UX Design', rating: 4.6, title: 'Fundamentals of UI/UX Design', description: 'Learn user-centered design and prototyping techniques.', price: 39.99 },
+  ];
+
+  // Place your own step icons in public/images and reference here
+  const steps = [
+    { title: 'Choose Your Path', description: 'Browse our catalog of online courses or search for local tutors based on your learning needs.', iconUrl: '/choose-path.png' },
+    { title: 'Learn Your Way', description: 'Study at your own pace with online courses or schedule sessions with your matched tutor.', iconUrl: '/learn-your-way.png' },
+    { title: 'Achieve Your Goals', description: 'Track your progress, earn certificates, and reach your educational objectives.', iconUrl: '/achieve-goals.png' },
+  ];
+
   return (
     <MainLayout>
       {/* Hero Section */}
@@ -29,7 +43,7 @@ export default function Home() {
             </div>
             <div className="relative h-[400px] rounded-xl overflow-hidden shadow-xl">
               <Image 
-                src="/hero-image.jpg" 
+                src="/hero-image.png" 
                 alt="Students learning online" 
                 fill
                 style={{ objectFit: 'cover' }}
@@ -49,24 +63,25 @@ export default function Home() {
           </div>
           
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-            {/* Course cards would go here - using placeholders for now */}
-            {[1, 2, 3].map((item) => (
-              <div key={item} className="bg-white rounded-lg overflow-hidden shadow-md transition-transform hover:shadow-lg hover:-translate-y-1">
-                <div className="relative h-48 bg-gray-200">
-                  {/* Course thumbnail placeholder */}
+            {placeholderCourses.map((course) => (
+              <div key={course.id} className="bg-white rounded-lg overflow-hidden shadow-md transition-transform hover:shadow-lg hover:-translate-y-1">
+                <div className="relative h-48 w-full overflow-hidden">
+                  <Image src={course.imageUrl} alt={course.title} fill className="object-cover" />
                 </div>
                 <div className="p-5">
                   <div className="flex justify-between items-center mb-2">
-                    <span className="text-xs font-medium text-primary-600 bg-primary-50 px-2 py-1 rounded-full">Category</span>
+                    <span className="text-xs font-medium text-primary-600 bg-primary-50 px-2 py-1 rounded-full">{course.category}</span>
                     <div className="flex items-center">
-                      <span className="text-yellow-400">★★★★★</span>
-                      <span className="text-xs text-gray-500 ml-1">5.0</span>
+                      {[...Array(5)].map((_, i) => (
+                        <span key={i} className="text-yellow-400">★</span>
+                      ))}
+                      <span className="text-xs text-gray-500 ml-1">{course.rating.toFixed(1)}</span>
                     </div>
                   </div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-1">Course Title</h3>
-                  <p className="text-sm text-gray-600 mb-4">Brief description of the course content and what students will learn.</p>
+                  <h3 className="text-lg font-bold text-gray-900 mb-1">{course.title}</h3>
+                  <p className="text-sm text-gray-600 mb-4">{course.description}</p>
                   <div className="flex justify-between items-center">
-                    <span className="text-lg font-bold text-gray-900">$49.99</span>
+                    <span className="text-lg font-bold text-gray-900">${course.price.toFixed(2)}</span>
                     <Button size="sm">View Course</Button>
                   </div>
                 </div>
@@ -130,27 +145,11 @@ export default function Home() {
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {[
-              {
-                title: 'Choose Your Path',
-                description: 'Browse our catalog of online courses or search for local tutors based on your learning needs.',
-                icon: '🔍'
-              },
-              {
-                title: 'Learn Your Way',
-                description: 'Study at your own pace with online courses or schedule sessions with your matched tutor.',
-                icon: '📚'
-              },
-              {
-                title: 'Achieve Your Goals',
-                description: 'Track your progress, earn certificates, and reach your educational objectives.',
-                icon: '🏆'
-              }
-            ].map((step, index) => (
+            {steps.map((step, index) => (
               <div key={index} className="bg-white rounded-lg p-6 shadow-md text-center">
-                <div className="text-4xl mb-4">{step.icon}</div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">{step.title}</h3>
-                <p className="text-gray-600">{step.description}</p>
+                <Image src={step.iconUrl} alt={step.title} width={48} height={48} className="mx-auto mb-4" />
+                <h3 className="text-xl font-semibold mb-2">{step.title}</h3>
+                <p className="text-base text-gray-600">{step.description}</p>
               </div>
             ))}
           </div>
@@ -208,17 +207,25 @@ export default function Home() {
 
       {/* CTA Section */}
       <section className="bg-primary-600 py-12 sm:py-16">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl font-bold font-heading text-white">Ready to Start Learning?</h2>
-          <p className="mt-4 text-xl text-primary-100 max-w-2xl mx-auto">
+        <div className="mx-auto max-w-2xl px-4 sm:px-6 lg:px-8 text-center">
+          <h2 className="text-3xl font-bold font-heading text-black">
+            Ready to Start Learning?
+          </h2>
+          <p className="mt-4 text-xl text-primary-100">
             Join thousands of students who are already expanding their knowledge and skills with TutorTrend.
           </p>
-          <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center">
-            <Link href="/auth/register">
-              <Button size="lg" className="bg-white text-primary-600 hover:bg-primary-50">Sign Up Now</Button>
+
+          <div className="mt-8 flex flex-col sm:flex-row justify-center items-center gap-4">
+            <Link href="/auth/register" className="w-full sm:w-auto">
+              <Button size="lg" className="w-full sm:w-auto bg-primary-500 text- rounded-lg px-6 py-3 font-medium hover:bg-primary-600 transition">
+                Sign Up – It’s Free
+              </Button>
             </Link>
-            <Link href="/courses">
-              <Button size="lg" variant="outline" className="text-white border-white hover:bg-primary-700">Browse Courses</Button>
+
+            <Link href="/courses" className="w-full sm:w-auto">
+              <Button size="lg" className="w-full sm:w-auto border border-accent-500 text-accent-500 rounded-lg px-6 py-3 font-medium hover:bg-accent-600/10 transition">
+                Browse Courses
+              </Button>
             </Link>
           </div>
         </div>
