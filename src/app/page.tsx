@@ -32,12 +32,12 @@ export default function Home() {
               <p className="mt-4 text-xl text-gray-600 max-w-lg">
                 TutorTrend combines premium online courses with personalized local tutoring to give you the best learning experience.
               </p>
-              <div className="mt-8 flex flex-col sm:flex-row gap-4">
+              <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center sm:justify-start">
                 <Link href="/courses">
-                  <Button size="lg">Explore Courses</Button>
+                  <Button variant="outline" size="lg" className="hover:bg-gray-100 cursor-pointer">Explore Courses</Button>
                 </Link>
                 <Link href="/tutors">
-                  <Button variant="outline" size="lg">Find a Tutor</Button>
+                  <Button variant="outline" size="lg" className="hover:bg-gray-100 cursor-pointer">Find a Tutor</Button>
                 </Link>
               </div>
             </div>
@@ -91,7 +91,7 @@ export default function Home() {
           
           <div className="mt-10 text-center">
             <Link href="/courses">
-              <Button variant="outline">View All Courses</Button>
+              <Button variant="outline" className="hover:bg-gray-100 cursor-pointer">View All Courses</Button>
             </Link>
           </div>
         </div>
@@ -217,13 +217,13 @@ export default function Home() {
 
           <div className="mt-8 flex flex-col sm:flex-row justify-center items-center gap-4">
             <Link href="/auth/register" className="w-full sm:w-auto">
-              <Button size="lg" className="w-full sm:w-auto bg-primary-500 text- rounded-lg px-6 py-3 font-medium hover:bg-primary-600 transition">
-                Sign Up – It’s Free
+              <Button variant="outline" size="lg" className="w-full sm:w-auto hover:bg-gray-100 cursor-pointer">
+                Sign Up – It’s Free!
               </Button>
             </Link>
 
             <Link href="/courses" className="w-full sm:w-auto">
-              <Button size="lg" className="w-full sm:w-auto border border-accent-500 text-accent-500 rounded-lg px-6 py-3 font-medium hover:bg-accent-600/10 transition">
+              <Button variant="outline" size="lg" className="w-full sm:w-auto hover:bg-gray-100 cursor-pointer">
                 Browse Courses
               </Button>
             </Link>
