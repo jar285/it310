@@ -7,27 +7,27 @@ import MainLayout from '@/components/layout/main-layout';
 export default function AboutPage() {
   const teamMembers = [
     {
-      name: 'Sarah Johnson',
-      role: 'Founder & CEO',
-      bio: 'Former education consultant with 15+ years of experience in EdTech. Sarah founded TutorTrend with a vision to make quality education accessible to everyone.',
+      name: 'Jesus Rosario Vargas',
+      role: 'Founder & Web Developer',
+      bio: 'Web Developer student at NJIT. Jesus founded TutorTrend with a vision to make quality education accessible to everyone.',
       image: '/team-member-1.jpg',
     },
     {
-      name: 'Michael Chen',
-      role: 'CTO',
-      bio: 'Tech industry veteran with a background in AI and machine learning. Michael leads our engineering team and is passionate about using technology to improve educational outcomes.',
+      name: 'Lawson Serge',
+      role: 'Lead Developer',
+      bio: 'NJIT student with a passion for technology and education. Lawson leads the development of our platform to create intuitive learning experiences.',
       image: '/team-member-2.jpg',
     },
     {
-      name: 'Emily Rodriguez',
-      role: 'Head of Education',
-      bio: 'Former university professor with a PhD in Education. Emily ensures that our platform maintains the highest standards of educational quality and effectiveness.',
+      name: 'Melannie K Ly',
+      role: 'UX Designer',
+      bio: 'NJIT student focusing on user experience design. Melannie ensures that our platform is accessible and engaging for all types of learners.',
       image: '/team-member-3.jpg',
     },
     {
-      name: 'David Kim',
-      role: 'Head of Product',
-      bio: 'Product management expert with experience at leading tech companies. David focuses on creating intuitive and engaging learning experiences for our users.',
+      name: 'Sahith Thopucherla',
+      role: 'Backend Developer',
+      bio: 'NJIT student specializing in backend systems. Sahith works on creating robust infrastructure that powers the TutorTrend platform.',
       image: '/team-member-4.jpg',
     },
   ];
@@ -102,21 +102,25 @@ export default function AboutPage() {
               <h2 className="text-3xl font-bold text-gray-900">Our Story</h2>
               <div className="mt-6 text-lg text-gray-600 space-y-4">
                 <p>
-                  TutorTrend was founded in 2023 with a simple yet powerful vision: to make quality education accessible to everyone, everywhere. We recognized that while there were many online learning platforms, few effectively combined the benefits of self-paced courses with personalized tutoring.
+                  TutorTrend was founded in 2025 with a simple yet powerful vision: to make quality education accessible to everyone, everywhere. We recognized that while there were many online learning platforms, few effectively combined the benefits of self-paced courses with personalized tutoring.
                 </p>
                 <p>
-                  Our founder, Sarah Johnson, experienced this gap firsthand as both an educator and a lifelong learner. She envisioned a platform where learners could not only access top-quality courses but also connect with expert tutors who could provide personalized guidance and support.
+                  Our founder, Jesus Rosario Vargas, a Web Developer student at NJIT, experienced this gap firsthand as both an educator and a lifelong learner. He envisioned a platform where learners could not only access top-quality courses but also connect with expert tutors who could provide personalized guidance and support.
                 </p>
                 <p>
-                  What started as a small team of passionate educators and technologists has grown into a global community of learners, instructors, and tutors united by a common goal: to transform education and empower individuals to achieve their full potential.
+                  What started as a small team of passionate NJIT students including Lawson Serge, Melannie K Ly, and Sahith Thopucherla has grown into a global community of learners, instructors, and tutors united by a common goal: to transform education and empower individuals to achieve their full potential.
                 </p>
               </div>
             </div>
-            <div className="relative h-96 bg-gray-200 rounded-lg">
-              {/* Placeholder for an image about the company's story */}
-              <div className="absolute inset-0 flex items-center justify-center">
-                <span className="text-gray-500">Company Story Image</span>
-              </div>
+            <div className="relative h-96 rounded-lg overflow-hidden">
+              {/* Actual company story image instead of placeholder */}
+              <Image 
+                src="/company-story.jpg" 
+                alt="TutorTrend team working together" 
+                layout="fill"
+                objectFit="cover"
+                className="rounded-lg"
+              />
             </div>
           </div>
         </div>
@@ -151,8 +155,8 @@ export default function AboutPage() {
           <div className="grid grid-cols-2 gap-8 md:grid-cols-4">
             {stats.map((stat, index) => (
               <div key={index} className="text-center">
-                <div className="text-4xl font-bold text-white">{stat.value}</div>
-                <div className="mt-2 text-lg font-medium text-primary-100">{stat.label}</div>
+                <div className="text-4xl font-bold text-black">{stat.value}</div>
+                <div className="mt-2 text-lg font-medium text-black">{stat.label}</div>
               </div>
             ))}
           </div>
@@ -199,8 +203,8 @@ export default function AboutPage() {
               Whether you're a learner seeking knowledge, an educator sharing expertise, or a professional joining our team, there's a place for you at TutorTrend.
             </p>
             <div className="mt-8 flex justify-center gap-4">
-              <Button size="lg">Start Learning</Button>
-              <Button size="lg" variant="outline">Become a Tutor</Button>
+              <Button size="lg" variant="outline" className="cursor-pointer">Start Learning</Button>
+              <Button size="lg" variant="outline" className="cursor-pointer">Become a Tutor</Button>
             </div>
           </div>
         </div>
